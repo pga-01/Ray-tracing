@@ -4,7 +4,7 @@ from scipy import linalg as LA
 import cmath
 class Ray:
         
-    def __init__(self, wavetype, F, p = (0,0,0), k = (0,0,0), A = 1, phase = 0,
+    def __init__(self, wavetype, F, p = (0,0,0), k = (0,0,0), A = 1, phase = 1,
                  **kwargs): 
         """
         Takes as arguments p, the current ray position coordinate and k, the 
@@ -32,6 +32,10 @@ class Ray:
         self._frameTpos = [np.zeros(3)]
         self._frameTdistances = [np.zeros(3)]
         self._frameTrdistances = [0]
+        
+        self._frameTscreen_xs = []
+        self._frameTscreen_ys = []
+        self._frameTscreen_zdistances = []
         # self._nindices = []
         
         
@@ -118,11 +122,8 @@ class Ray:
         
         prop1 = direction
         prop2 = np.array([0,0,1])
-        print("prop1",prop1)
         rotax = np.cross(prop1, prop2)/LA.norm(np.cross(prop1, prop2))
-        print("rotax", rotax)
         theta = np.arccos(np.dot(prop1, prop2))
-        print("theta", theta)
         if theta != 0.0:
         
             R1 = [rotax[0]*rotax[0]*(1-np.cos(theta)) + np.cos(theta), 
@@ -137,8 +138,7 @@ class Ray:
             R = np.array([R1, R2, R3])
             new_coordinates = np.matmul(R, coordinates) + self._frameTpos[-1]
         elif theta == 0.0:
-            new_coordinates = coordinates - self.coordinates()[3][0]
-        print("hello", new_coordinates)
+            new_coordinates = coordinates + self._frameTpos[-1]
 
         return new_coordinates
         
@@ -148,25 +148,23 @@ class Ray:
         appends this new position to a list containing all positions of the 
         ray.
         """
-        if p is not None:
-            
-            
-            self._E = E
-            self._Es.append(self._E)
-            self._p = np.array([p[0], p[1], p[2]])
-            self._pos.append(self._p)
+        # if p is not None:
+        self._E = E
+        self._Es.append(self._E)
+        self._p = np.array([p[0], p[1], p[2]])
+        self._pos.append(self._p)
 
-            self._k = np.array([k[0], k[1], k[2]])
-            self._directs.append(self._k)
-            self._A = A
-            self._amps.append(self._A)
-            self._phase = phase
-            self._phases.append(self._phase)
-            self._F = F
-            self._Fs.append(self._F)
-            
-            self._distances.append(abs(self._pos[-1]-self._pos[-2])+self._distances[-1])
-            self._rdistances.append(LA.norm(abs(self._pos[-1]-self._pos[-2]))+self._rdistances[-1])
+        self._k = np.array([k[0], k[1], k[2]])
+        self._directs.append(self._k)
+        self._A = A
+        self._amps.append(self._A)
+        self._phase = phase
+        self._phases.append(self._phase)
+        self._F = F
+        self._Fs.append(self._F)
+        
+        self._distances.append(abs(self._pos[-1]-self._pos[-2])+self._distances[-1])
+        self._rdistances.append(LA.norm(abs(self._pos[-1]-self._pos[-2]))+self._rdistances[-1])
            
         return self
     
@@ -178,9 +176,27 @@ class Ray:
         self._frameTdistances.append(abs(self._frameTpos[-1]-self._frameTpos[-2])+self._frameTdistances[-1])
         self._frameTrdistances.append(LA.norm(abs(self._frameTpos[-1]-self._frameTpos[-2]))+self._frameTrdistances[-1])
 
+    def append3(self, frameTscreen_x, frameTscreen_y, frameTscreen_zdistance): # PROVISIONAL
+    
+        self._frameTscreen_x = frameTscreen_x
+        self._frameTscreen_y = frameTscreen_y
+        self._frameTscreen_zdistance = frameTscreen_zdistance
+        
+        self._frameTscreen_xs.append(self._frameTscreen_x)
+        self._frameTscreen_ys.append(self._frameTscreen_y)
+        self._frameTscreen_zdistances.append(self._frameTscreen_zdistance)
+        
     def frameTpositions(self):
         
-        return self._frameTpos
+        self._frameTxs = np.array([i[0] for i in self._frameTpos])
+        self._frameTys = np.array([i[1] for i in self._frameTpos])
+        self._frameTzs = np.array([i[2] for i in self._frameTpos])
+        
+        return self._frameTxs, self._frameTys, self._frameTzs, self._frameTpos
+    
+    def frameTscreenpositions(self):
+        
+        return self._frameTscreen_xs, self._frameTscreen_ys, self._frameTscreen_zdistances
         
     def coordinates(self): 
         """
@@ -225,7 +241,6 @@ class Ray:
         self._frameTxdistances = np.array([i[0] for i in self._frameTdistances])
         self._frameTydistances = np.array([i[1] for i in self._frameTdistances])
         self._frameTzdistances = np.array([i[2] for i in self._frameTdistances])
-        # self._frameTrdistances = np.array([LA.norm(self._) for i in self._frameTdistances])
         
         return (self._frameTxdistances, self._frameTydistances, self._frameTzdistances,
                 self._frameTrdistances)
@@ -237,7 +252,6 @@ class Ray:
         self._xdistances = np.array([i[0] for i in self._distances])
         self._ydistances = np.array([i[1] for i in self._distances])
         self._zdistances = np.array([i[2] for i in self._distances])
-        # self._rdistances = np.array([LA.norm(i) for i in self._distances])
         
         return (self._xdistances, self._ydistances, self._zdistances,
                 self._rdistances)
@@ -269,39 +283,7 @@ class Ray:
             intersection_pos = self.p() + h/k * self.k()
         
         return intersection_pos
-    
-    def EGauss(self, F, w0, f):
-        """
-        Returns the electric field at a given distance travelled.
-        F: frequency
-        w0: waist
-        n: refractive index
-        f: focal length of lens focusing Gaussian beam
-        """  
-        x = self.p()[0]
-        y = self.p()[1]
-        rho = np.sqrt(x**2+y**2)
-        kwave = 2*np.pi*F/c
-        lamda = 2*np.pi/kwave
-        zR  = np.pi*w0**2/lamda
-        zw0 = f/(1+(f/zR)**2)
-        distancevector = [self.distances()[0][-1],
-                          self.distances()[1][-1],
-                          self.distances()[2][-1]]
-        distance = LA.norm(distancevector)-zw0
-        w = w0*np.sqrt(1 + (distance/zR)**2)
-        psi = np.arctan(distance/zR)
-        R = distance + zR**2/distance
-        
-        EG = (self.A()*
-              w/w0 *
-              np.exp(-rho**2/w**2) * 
-              np.exp(-1j*kwave*distance) * 
-              np.exp(-1j*kwave*rho**2/(2*R)) * 
-              np.exp(1j*psi))
-                
-        return EG
-    
+   
     
 class Bundle(Ray):
     """
@@ -329,13 +311,6 @@ class Bundle(Ray):
                      in zip(wavetype, F, p, k, A, phase, w0, f)])
             return rays
     
-    def irradiance(self):
-        
-        Eout = 0
-        for ray in self.manyray():
-            Eout += ray.E()
-    
-        
 class Uniform(Bundle):
     """
     This class contains the required method to creat a uniform collimated 
