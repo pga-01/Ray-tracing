@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import linalg as LA
-import warnings 
+# import warnings 
 import cmath
 class Ray:
         
@@ -27,6 +27,11 @@ class Ray:
         self._phases = [self._phase]
         
         self._distances = [np.zeros(3)]
+        self._rdistances = [0]
+        
+        self._frameTpos = [np.zeros(3)]
+        self._frameTdistances = [np.zeros(3)]
+        self._frameTrdistances = [0]
         # self._nindices = []
         
         
@@ -109,6 +114,34 @@ class Ray:
         self._p = np.array([p[0], p[1], p[2]])
         self._k = np.array([k[0], k[1], k[2]])
         
+    def frameT(self, coordinates, direction):
+        
+        prop1 = direction
+        prop2 = np.array([0,0,1])
+        print("prop1",prop1)
+        rotax = np.cross(prop1, prop2)/LA.norm(np.cross(prop1, prop2))
+        print("rotax", rotax)
+        theta = np.arccos(np.dot(prop1, prop2))
+        print("theta", theta)
+        if theta != 0.0:
+        
+            R1 = [rotax[0]*rotax[0]*(1-np.cos(theta)) + np.cos(theta), 
+                  rotax[0]*rotax[1]*(1-np.cos(theta)) - rotax[2]*np.sin(theta), 
+                  rotax[0]*rotax[2]*(1-np.cos(theta)) + rotax[1]*np.sin(theta)]
+            R2 = [rotax[1]*rotax[0]*(1-np.cos(theta)) + rotax[2]*np.sin(theta),
+                  rotax[1]*rotax[1]*(1-np.cos(theta)) + np.cos(theta),
+                  rotax[1]*rotax[2]*(1-np.cos(theta)) - rotax[0]*np.sin(theta)]
+            R3 = [rotax[2]*rotax[0]*(1-np.cos(theta)) - rotax[1]*np.sin(theta),
+                  rotax[2]*rotax[1]*(1-np.cos(theta)) + rotax[0]*np.sin(theta),
+                  rotax[2]*rotax[2]*(1-np.cos(theta)) + np.cos(theta)]
+            R = np.array([R1, R2, R3])
+            new_coordinates = np.matmul(R, coordinates) + self._frameTpos[-1]
+        elif theta == 0.0:
+            new_coordinates = coordinates - self.coordinates()[3][0]
+        print("hello", new_coordinates)
+
+        return new_coordinates
+        
     def append(self, F, p, k, A, phase, E):
         """
         Sets a new position and direction for ray and 
@@ -116,11 +149,13 @@ class Ray:
         ray.
         """
         if p is not None:
-
+            
+            
             self._E = E
             self._Es.append(self._E)
             self._p = np.array([p[0], p[1], p[2]])
             self._pos.append(self._p)
+
             self._k = np.array([k[0], k[1], k[2]])
             self._directs.append(self._k)
             self._A = A
@@ -131,10 +166,22 @@ class Ray:
             self._Fs.append(self._F)
             
             self._distances.append(abs(self._pos[-1]-self._pos[-2])+self._distances[-1])
-            # self._nindex = nindex
-            # self._nindices.append(self._nindex)
-    
+            self._rdistances.append(LA.norm(abs(self._pos[-1]-self._pos[-2]))+self._rdistances[-1])
+           
         return self
+    
+    def append2(self, frameTp): # PROVISIONAL
+        
+        self._frameTp = frameTp
+        self._frameTpos.append(self._frameTp)
+        
+        self._frameTdistances.append(abs(self._frameTpos[-1]-self._frameTpos[-2])+self._frameTdistances[-1])
+        self._frameTrdistances.append(LA.norm(abs(self._frameTpos[-1]-self._frameTpos[-2]))+self._frameTrdistances[-1])
+
+    def frameTpositions(self):
+        
+        return self._frameTpos
+        
     def coordinates(self): 
         """
         Extracts x,y and z coordinates from position arrays.
@@ -143,7 +190,7 @@ class Ray:
         self._ys = np.array([i[1] for i in self._pos])
         self._zs = np.array([i[2] for i in self._pos])
         
-        return self._xs, self._ys, self._zs
+        return self._xs, self._ys, self._zs, self._pos, 
     
     def directions(self): 
         """
@@ -153,7 +200,7 @@ class Ray:
         self._kys = np.array([i[1] for i in self._directs])
         self._kzs = np.array([i[2] for i in self._directs])
         
-        return self._kxs, self._kys, self._kzs
+        return self._kxs, self._kys, self._kzs, self._directs
     
     def amplitudes(self):
         """
@@ -169,7 +216,19 @@ class Ray:
         """
         self._phasesS = np.array([i for i in self._phases])
        
-        return self._phasesS   
+        return self._phasesS  
+    
+    def frameTdistances(self):
+        """
+        Extracts distance travelled in x, y and z direction.
+        """
+        self._frameTxdistances = np.array([i[0] for i in self._frameTdistances])
+        self._frameTydistances = np.array([i[1] for i in self._frameTdistances])
+        self._frameTzdistances = np.array([i[2] for i in self._frameTdistances])
+        # self._frameTrdistances = np.array([LA.norm(self._) for i in self._frameTdistances])
+        
+        return (self._frameTxdistances, self._frameTydistances, self._frameTzdistances,
+                self._frameTrdistances)
      
     def distances(self):
         """
@@ -178,8 +237,10 @@ class Ray:
         self._xdistances = np.array([i[0] for i in self._distances])
         self._ydistances = np.array([i[1] for i in self._distances])
         self._zdistances = np.array([i[2] for i in self._distances])
+        # self._rdistances = np.array([LA.norm(i) for i in self._distances])
         
-        return self._xdistances, self._ydistances, self._zdistances
+        return (self._xdistances, self._ydistances, self._zdistances,
+                self._rdistances)
     
     def Es(self):
         """
@@ -362,22 +423,3 @@ class Uniform(Bundle):
         """
         return self._bundle_pos
     
-    
-
-
-
-
-    
-       
-    
-        
-    
-
-
-
-
-
-
-        
-    
-
