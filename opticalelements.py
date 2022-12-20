@@ -30,6 +30,9 @@ class OpticalElement:
         a_R: lens aperture radius.
         R: re
         """
+        global c
+        c = 299792458 # m/s
+        
         self.z_0_1 = sp.array([z_0_1[0], z_0_1[1], z_0_1[2]]) 
         self.z_0_2 = sp.array([z_0_2[0], z_0_2[1], z_0_2[2]]) 
         
@@ -38,18 +41,11 @@ class OpticalElement:
         
         self._n1 = n1
         self._n2 = n2
-        
-        # print("thetax Sph before", self._thetax)
-        
+                
         self._thetay = thetay
         self._thetax = thetax 
         self._thetaz = thetaz
 
-        print("thetax Sph after", self._thetax)
-        print("thetay Sph after", self._thetay)
-        print("thetaz Sph after", self._thetaz)
-
-        
         self._Re_1 = Re_1
         self._Re_2 = Re_2
         
@@ -69,7 +65,6 @@ class OpticalElement:
 
 
     def __repr__(self):
-        
         return (("z_0_1: %s, z_0_2: %s, curvature_1: %s, curvature_2: %s, "
                  "n1: %s, n2: %s, aperture radius: %s")
                 %(self.z_0_1, self.z_0_2, self._curv_1, self._curv_2,  
@@ -145,13 +140,10 @@ class OpticalElement:
         """
         Rotate an optical element about a given point
         """
-        print("in rot")       
         self.setthetax(thetax)
         self.setthetay(thetay)
         self.setthetaz(thetaz)
-        print(self._thetax)
-        print(self._thetay)
-        print(self._thetaz)
+
         centren1 = self.z_0_1-rotpoint        
         centrennew1 = rotpoint + self.z_rot(self.y_rot(self.x_rot(centren1)))
         
@@ -174,21 +166,10 @@ class OpticalElement:
         """ 
         if self._curv_1 ==0 or self._curv_2 == 0:
             if np.all(z_0 == self.z_0_1):
-                # print("thetax", self._thetax)
-                # normal = self.unit_v(self.x_rot(np.array([0,0,-1])))
-                # print("NORMAL Xrot", normal)
-                # normal = self.unit_v(self.y_rot(np.array([0,0,-1])))
-                # print("NORMAL Yrot", normal)
-                # normal = self.unit_v(self.z_rot(np.array([0,0,-1])))
-                # print("NORMAL Zrot", normal)
                 normal = self.unit_v(self.z_rot(self.y_rot(self.x_rot(np.array([0,0,-1])))))
-                # normal = self.unit_v(self.x_rot(self.y_rot([0,0,0])))
-                # print("NORMAL", normal)
             elif np.all(z_0 == self.z_0_2):
                 normal = self.unit_v(self.z_rot(self.y_rot(self.x_rot(np.array([0,0,1])))))
-                # print("NORMAL2", normal)
         else:
-            print("shouldnt")
             normal = self.intercept(ray, z_0) - self.C(z_0)
         
         return normal
@@ -198,19 +179,15 @@ class OpticalElement:
         Returns normal vector at the point z_0_1.
         """
         normal = self.unit_v(self.z_rot(self.y_rot(self.x_rot(np.array([0,0,-1])))))
-        print("normal", normal)
+        # print("normal", normal)
         return normal
 
     def point2plane(self, ray, z_0):
         
         centrep = (self.z_0_1 + self.z_0_2)/2 
-        print("centrep", centrep)
         ponplane = centrep + LA.norm(self.z_0_1-centrep)*(self.n(ray, z_0))
-        print("ponplane", ponplane)
         d = -np.dot(self.n(ray, z_0), ponplane)
-        print("d", d)
         D = -(np.dot(self.n(ray, z_0), ray.p()) + d) / np.dot(self.n(ray, z_0), ray.k())
-        print("D", D)
         return D
 
     def Snellslaw(self, ray, z_0):
@@ -232,7 +209,6 @@ class OpticalElement:
             n_hat = -n_hat
             
         self.theta1 = sp.arccos(sp.dot(k1, n_hat))
-        # print("theta1", self.theta1*180/np.pi)
         
         if LA.norm(ray.p()-self.z_0_1) < LA.norm(ray.p()-self.z_0_2):
             
@@ -269,7 +245,6 @@ class OpticalElement:
         # of incidence ray
          
         n_hat = SphericalRefraction.unit_v(self, self.n(ray, z_0))#normal 
-        print("nhat", n_hat)
         # unit vector at surface
         if np.arccos(sp.dot(k1, n_hat))>np.pi/2:
             
@@ -298,11 +273,11 @@ class OpticalElement:
             rayi = ray[i]
             
             if LA.norm(rayi.p()-self.z_0_1) < LA.norm(rayi.p()-self.z_0_2):
-                print("up")
+                # print("up")
       
                 if action_1 is not None:
                     if action_1 == "refract":
-                        print("action 1 refract")
+                        # print("action 1 refract")
                         rayi.append(rayi.F(),
                                    self.intercept(rayi, self.z_0_1), 
                                    self.Snellslaw(rayi, self.z_0_1),
@@ -313,7 +288,7 @@ class OpticalElement:
                                                  direction))  
                                  
                     elif action_1 == "reflect":
-                        print("action_1 reflect")
+                        # print("action_1 reflect")
                         rayi.append(rayi.F(),
                                    self.intercept(rayi, self.z_0_1), 
                                    self.reflect(rayi, self.z_0_1),
@@ -327,7 +302,7 @@ class OpticalElement:
                 
                 if  action_2 is not None:
                     if action_2 == "refract":
-                        print("action 2 refract")
+                        # print("action 2 refract")
                         rayi.append(rayi.F(),
                                    self.intercept(rayi, self.z_0_2), 
                                    self.Snellslaw(rayi, self.z_0_2),
@@ -338,7 +313,7 @@ class OpticalElement:
                                                  direction))
                         
                     elif action_2 == "reflect":
-                        print("action 2 reflect")
+                        # print("action 2 reflect")
                         rayi.append(rayi.F(),
                                    self.intercept(rayi, self.z_0_2), 
                                    self.reflect(rayi, self.z_0_2),
@@ -354,11 +329,11 @@ class OpticalElement:
                 
             elif LA.norm(rayi.p()-self.z_0_1) > LA.norm(rayi.p()-self.z_0_2):
      
-                print("down")
+                # print("down")
                 
                 if  action_2 is not None:
                     if action_2 == "refract":
-                        print("action 2 refract")
+                        # print("action 2 refract")
                         rayi.append(rayi.F(),
                                     self.intercept(rayi, self.z_0_2), 
                                     self.Snellslaw(rayi, self.z_0_2),
@@ -369,7 +344,7 @@ class OpticalElement:
                                                  direction))
                                    
                     elif action_2 == "reflect":
-                        print("action 2 reflect")
+                        # print("action 2 reflect")
                         rayi.append(rayi.F(),
                                     self.intercept(rayi, self.z_0_2), 
                                     self.reflect(rayi, self.z_0_2),
@@ -384,7 +359,7 @@ class OpticalElement:
                         
                 if action_1 is not None:
                     if action_1 == "refract":
-                        print("action 1 refract")
+                        # print("action 1 refract")
                         rayi.append(rayi.F(),
                                     self.intercept(ray, self.z_0_1), 
                                     self.Snellslaw(ray, self.z_0_1),
@@ -395,7 +370,7 @@ class OpticalElement:
                                                  direction))
                                    
                     elif action_1 == "reflect":
-                        print("action 1 reflect")
+                        # print("action 1 reflect")
                         rayi.append(rayi.F(),
                                     self.intercept(ray, self.z_0_1), 
                                     self.reflect(ray, self.z_0_1),
@@ -451,7 +426,6 @@ class SphericalRefraction(OpticalElement):
             self._R_2 = abs(1(self._curv_2))
             if self._a_R > (self._R_1 or self._R_2):
                 self._a_R = min(self._R_1, self._R_2)
-                # print("here")
                 print(("Aperture radius, a_R, must be smaller or equal to the" + \
                       "radius of curvature of the surface with the highest curvature"
                       "The new aperture radius is %s") % (self._a_R))
@@ -627,20 +601,18 @@ class Plane(OpticalElement):
                  Re_1, Re_2):
         self._R_1 = R_1
         self._R_2 = R_2
-        # print("thetax Plane before", self._thetax)
+        
         super().__init__(z_0_1, z_0_2, 
                  0, 0, 
                  n1, n2, 
                  thetax, thetay, thetaz, 
                  Re_1, Re_2)
-        print("thetax Plane after", self._thetax)
         
     def intercept(self, ray, z_0):
         """
         Method calculates the first valid intercept of a ray with a spherical
         surface.
         """
-        # print("in intercept")
         self._z_0 = z_0
         
         if np.all(z_0 == self.z_0_1):
@@ -652,13 +624,9 @@ class Plane(OpticalElement):
              
         k_hat = SphericalRefraction.unit_v(self, ray.k())#direction unit vector
         
-        print("1st")
         lamdafactor = self.point2plane(ray, z_0)
         L = LA.norm(lamdafactor * ray.k())
         intersection= ray.p() + L*k_hat
-        print("intersection", intersection)
-        print("z_0", self._z_0)
-        print("L", L)
         
         if LA.norm(intersection-self._z_0) > R:
             #Aperture radius ray-cut condition.
@@ -691,14 +659,13 @@ class Plane(OpticalElement):
         r2 = np.linspace(0, self._R_2, 20, endpoint = False)
         deltar1 = r1[-1]-r1[-2]
         deltar2 = r2[-1]-r2[-2]
-        print("normal", self.normalz_0())
 
         generate_circle_by_angles(t, C1, [self._R_1-deltar1, self._R_1], self.normalz_0(), display = True,
                                   fig = fig, ax = ax, color = "k", alpha = 1)
         generate_circle_by_angles(t, C1, r1, self.normalz_0(), display = True,
                                   fig = fig, ax = ax, color = color, alpha = alpha)
         if np.any(C1 != C2):
-            print("here")
+            
             generate_circle_by_angles(t, C2, [self._R_2-deltar2, self._R_2], self.normalz_0(), display = True,
                                   fig = fig, ax = ax, color = "k", alpha = 1)
             generate_circle_by_angles(t, C2, r2,  self.normalz_0(), display = True,
@@ -713,14 +680,12 @@ class Mirror(Plane):
                  n1,
                  R_1,  
                  thetax, thetay, thetaz):
-        # print("thetax Mirror before", self._thetax)
 
         super().__init__(z_0_1, z_0_1, 
                          n1, 1.5,
                          R_1, R_1,
                          thetax, thetay, thetaz,
                          1, 1)
-        print("thetax Mirror after", self._thetax)
     
     def propagate_ray(self, ray):
         if not isinstance(ray, list):
@@ -734,7 +699,7 @@ class Mirror(Plane):
                         rayi.A()*self.r1, 
                         rayi.phase()*np.exp(1j*np.pi),
                         rayi.E())
-        rayi.append2(rayi.frameT(rayi.coordinates()[3][-1]-rayi.coordinates()[3][-2],
+            rayi.append2(rayi.frameT(rayi.coordinates()[3][-1]-rayi.coordinates()[3][-2],
                                  rayi.directions()[3][-2]))            
 # _____________________________________________________________________________
 
@@ -758,7 +723,6 @@ class OutputPlane(Plane):
                 if shape == "circle", need radius R.
         """
         
-        # self._plane_pos = sp.array([plane_pos[0], plane_pos[1], plane_pos[2]])  
         self._shape = shape
         if shape == "rec":
             self._W = kwargs.get("W")
@@ -773,13 +737,16 @@ class OutputPlane(Plane):
                         0, 0)   
         
         self._screen_pos = []#appended in intercept_plane method
+    
+    def frameTscreen(self):
+        
+        return self._frameTscreen_x, self._frameTscreen_y, self._frameTscreen_zdistance
                 
     def intercept_screen(self, ray):
         """
         Returns the interception of a ray with the output plane.
         """
 
-        print("intercept_plane")
         self._screen_point = self.intercept(ray, self.z_0_1)
         
         
@@ -808,9 +775,9 @@ class OutputPlane(Plane):
                 self._screen_pos.append(sp.array([self._screen_point[0], 
                                                   self._screen_point[1],
                                                   self._screen_point[2]]))
+                
                 return self._screen_point
             else:
-                print("here")
                 return None
         # return self._screen_point
     
@@ -829,8 +796,10 @@ class OutputPlane(Plane):
             ray = [ray]
         for i in range(len(ray)):
             rayi = ray[i]
+            if (self.intercept_screen(rayi) is not None
+                and np.any(rayi.p() != self.intercept_screen(rayi))):
 
-            if np.all(rayi.p() == self.z_0_1) == False:
+                # if np.all(rayi.p() == self.z_0_1) == False:
                 rayi.append(rayi.F(),
                            self.intercept_screen(rayi), 
                            rayi.k(),
@@ -839,16 +808,59 @@ class OutputPlane(Plane):
                            rayi.E())
                 rayi.append2(rayi.frameT(rayi.coordinates()[3][-1]-rayi.coordinates()[3][-2],
                                          rayi.directions()[3][-2]))  
-                 
+                rayi.append3(rayi.frameTpositions()[0][-1],
+                             rayi.frameTpositions()[1][-1],
+                             rayi.frameTdistances()[2][-1])
+                # print("rayi.frameTpositions()[0][-1]", rayi.frameTpositions()[0][-1])
                 # return rayi.p()
               
             else:
-                print("here2")
+                # print("here2")
                 #if the last z coordinate of the ray position matches that of the 
                 # output plane, then stop method.
                  
                 return rayi.p()
+    
+    def Eout2GB(self, ray, x, y, z, kwave, w0, f):
+        
+        EoutGB = 0
+        EoutGBstar = 0
+        
+        if not isinstance(ray, list):
+            ray = [ray]
+        for i in range(len(ray)):
+            rayi = ray[i]
+            
+            if np.all(rayi.p() == self.intercept_screen(rayi)):
 
+                xM = rayi.frameTscreenpositions()[0][0] / 1000
+                yM = rayi.frameTscreenpositions()[1][0] / 1000
+                rhoM = np.sqrt((xM+x)**2+(yM+y)**2)
+                
+                # kwave = 2*np.pi*rayi.F()/c
+                lamda = 2*np.pi/kwave
+                zR  = np.pi*w0**2/lamda
+                zw0 = f/(1+(f/zR)**2)                
+                zdistM = rayi.frameTscreenpositions()[2][0]/1000 - zw0 + z
+                w = w0*np.sqrt(1 + (zdistM/zR)**2)
+                psi = np.arctan(zdistM/zR)
+                R = zdistM + zR**2/zdistM
+                
+                EGB = (rayi.A() *
+                       rayi.phase() *
+                       w0/w *
+                       np.exp(-rhoM**2/w**2) *
+                       np.exp(-1j*kwave*zdistM) *
+                       np.exp(-1j*kwave*rhoM**2/(2*R)) *
+                       np.exp(-1j*psi))
+                
+                EGBstar = np.conj(EGB)
+                
+                EoutGB += EGB
+                EoutGBstar += EGBstar
+        
+        return EoutGB*EoutGBstar
+            
 #_____________________________________________________________________________
         
 class Cavity(OpticalElement):
@@ -872,18 +884,9 @@ class Cavity(OpticalElement):
                 self._M2.setz_0(z_0_1 = self._M2.z_0_1+deltaL, 
                                    z_0_2 = self._M2.z_0_2+deltaL)
         centrep = (self._M1.z_0_2 + self._M2.z_0_1)/2
-        print(centrep)
-        print(self._M1.z_0_1)
-        print(self._M1.z_0_2)
-        print(self._M2.z_0_1)
-        print(self._M2.z_0_2)
+
         self._M1.rot(centrep, thetax = thetax, thetay = thetay, thetaz = thetaz)
         self._M2.rot(centrep, thetax = thetax, thetay = thetay, thetaz = thetaz)
-        print(self._M1.z_0_1)
-        print(self._M1.z_0_2)
-        print(self._M2.z_0_1)
-        print(self._M2.z_0_2)
-        
 
     def resonate(self, ray, m):
         
@@ -899,7 +902,6 @@ class Cavity(OpticalElement):
         #     m = m*len(ray)
         # counter2 = 0
         for i in range(len(ray)):
-            print("HEREEEEEEEEEEE")
             rayi = ray[i]
             direction = rayi.directions()[3][-1]
             
@@ -908,7 +910,6 @@ class Cavity(OpticalElement):
 
                 counter = 0
                 while counter < m[i]:
-                    print("HERE")                   
                     self._M2.propagate_ray(rayi, 
                                            action_1 = "reflect",
                                            action_2 = None,
@@ -927,7 +928,6 @@ class Cavity(OpticalElement):
               
                 counter = 0
                 while counter < m[i]:
-                    print("HERE")
                     self._M1.propagate_ray(rayi, 
                                            action_1 = "reflect",
                                            action_2 = None,
@@ -945,8 +945,4 @@ class Cavity(OpticalElement):
         
         self._M1.display(**kwargs)
         self._M2.display(**kwargs)
-            
-        
-  
-            
-                     
+           
